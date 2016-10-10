@@ -59,7 +59,7 @@ namespace {
 
 		const char &at(size_t i) const {
 			if (i >= std::distance(_begin,_end))
-				throw std::out_of_range("The provided lies outside of the range's length.");
+				throw std::out_of_range("The provided index lies outside of the range's length.");
 			return (*this)[i];
 		}
 		const char &operator[](size_t i) const { return *(_begin+i); }
