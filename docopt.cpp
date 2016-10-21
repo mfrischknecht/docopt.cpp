@@ -156,15 +156,11 @@ public:
 	}
 
 	static void join_tags(view_list &strings, string_list &delimiters) {
-		auto contains = [](string_view s, char c) {
-			return s.find(c) != std::string::npos;
-		};
-		using namespace std::placeholders;
-		auto is_start = std::bind(contains,_1,'<');
-		auto is_end   = std::bind(contains,_1,'>');
+		auto is_start = [](string_view s) { return s.find('<') != std::string::npos; };
+		auto is_end   = [](string_view s) { return s.find('>') != std::string::npos; };
+
 		auto is_delimiter = [&](string_view s) {
-			auto pos = std::find_if(delimiters.begin(),delimiters.end(),
-					[&](string_view d) { return s == d; });
+			auto pos = std::find(delimiters.begin(),delimiters.end(),s);
 			return pos != delimiters.end();
 		};
 
