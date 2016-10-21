@@ -530,7 +530,7 @@ namespace docopt {
 		auto double_space = option_description.find("  ");
 		auto options_end = option_description.end();
 		if (double_space != std::string::npos) {
-			options_end = option_description.begin() + static_cast<std::ptrdiff_t>(double_space);
+			options_end = option_description.begin()+double_space;
 		}
 
 #ifndef DOCOPT_NO_REGEX
