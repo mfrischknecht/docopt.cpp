@@ -562,44 +562,43 @@ namespace docopt {
 			}
 		}
 
-				if (argcount) {
-						std::smatch match;
-						if (std::regex_search(options_end, option_description.end(),
-												  match,
-												  std::regex{"\\[default: (.*)\\]", std::regex::icase}))
-						{
-								val = match[1].str();
-						}
-				}
+		if (argcount) {
+			std::smatch match;
+			if (std::regex_search(options_end, option_description.end(), match,
+				std::regex{"\\[default: (.*)\\]", std::regex::icase}))
+			{
+				val = match[1].str();
+			}
+		}
 #else
-				static const auto whitespace = { ' ', '\t', '\r', '\n' };
-				auto options = string_view(option_description.begin(),options_end)
-								.split_after({'=',',',' '});
-				for (auto option : options) {
-						option = option.rstrip({'=',',',' '});
-						if (option.empty()) break;
-						else if (option.starts_with("--")) longOption  = option;
-						else if (option.starts_with('-'))  shortOption = option;
-						else argcount = 1;
-				}
+		static const auto whitespace = { ' ', '\t', '\r', '\n' };
+		auto options = string_view(option_description.begin(),options_end).split_after({'=',',',' '});
+		for (auto option : options) {
+			option = option.rstrip({'=',',',' '});
+			if (option.empty()) break;
+			else if (option.starts_with("--")) longOption  = option;
+			else if (option.starts_with('-'))  shortOption = option;
+			else argcount = 1;
+		}
 
-				if (argcount) {
-						string_view description(options_end, option_description.end());
-						string_view default_;
-						std::tie(description,default_) = description.split_once_after("[default: ");
-						if (!default_.empty()) {
-							string_view tmp;
-							std::tie(default_,tmp) = default_.split_once_before(']');
-							if (!tmp.empty()) val = default_.str();
-						}
-				}
-				//TODO: Continue here.
+		if (argcount) {
+			string_view description(options_end, option_description.end());
+			string_view default_;
+			std::tie(description,default_) = description.split_once_after("[default: ");
+			if (!default_.empty()) {
+				string_view tmp;
+				std::tie(default_,tmp) = default_.split_once_before(']');
+				if (!tmp.empty()) val = default_.str();
+			}
+		}
+		//TODO: Continue here.
 #endif
 
-		return {std::move(shortOption),
-			std::move(longOption),
-			argcount,
-			std::move(val)};
+	return {
+		std::move(shortOption),
+		std::move(longOption),
+		argcount,
+		std::move(val)};
 	}
 
 	inline std::pair<size_t, std::shared_ptr<LeafPattern>> Option::single_match(PatternList const& left) const

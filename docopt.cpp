@@ -120,99 +120,99 @@ public:
 		return Tokens(tokens, false);
 	}
 #else
-		typedef std::vector<string_view> view_list;
-		typedef std::initializer_list<const char> char_list;
-		typedef std::initializer_list<const std::string> string_list;
+	typedef std::vector<string_view> view_list;
+	typedef std::initializer_list<const char> char_list;
+	typedef std::initializer_list<const std::string> string_list;
 
-		static void split_around(view_list &strings, const string_view &delim) {
-			if (delim.empty()) return;
-			auto pos = strings.begin();
-			while(pos != strings.end()) {
-				auto src = *pos;
-				pos = strings.erase(pos);
-				string_view head;
-				while(!src.empty()) {
-					std::tie(head,src) = src.split_once_after(delim);
-					if (head.ends_with(delim)) {
-						pos = strings.insert(pos, {head.begin(),head.end()-delim.size()})+1;
-						pos = strings.insert(pos, {head.end()-delim.size(),head.end()})+1;
-					} else {
-						pos = strings.insert(pos, head)+1;
-					}
+	static void split_around(view_list &strings, const string_view &delim) {
+		if (delim.empty()) return;
+		auto pos = strings.begin();
+		while(pos != strings.end()) {
+			auto src = *pos;
+			pos = strings.erase(pos);
+			string_view head;
+			while(!src.empty()) {
+				std::tie(head,src) = src.split_once_after(delim);
+				if (head.ends_with(delim)) {
+					pos = strings.insert(pos, {head.begin(),head.end()-delim.size()})+1;
+					pos = strings.insert(pos, {head.end()-delim.size(),head.end()})+1;
+				} else {
+					pos = strings.insert(pos, head)+1;
 				}
 			}
 		}
+	}
 
-		static void split_after(view_list &strings, const char_list &chars) {
-			if (chars.size() == 0) return;
-			auto pos = strings.begin();
-			while(pos != strings.end()) {
-				auto src = *pos;
-				pos = strings.erase(pos);
-				auto splits = src.split_after(chars);
-				for (auto split: splits)
-					pos = strings.insert(pos,split) + 1;
+	static void split_after(view_list &strings, const char_list &chars) {
+		if (chars.size() == 0) return;
+		auto pos = strings.begin();
+		while(pos != strings.end()) {
+			auto src = *pos;
+			pos = strings.erase(pos);
+			auto splits = src.split_after(chars);
+			for (auto split: splits)
+				pos = strings.insert(pos,split) + 1;
+		}
+	}
+
+	static void join_tags(view_list &strings, const string_list &delimiters) {
+		auto contains = [](string_view s, char c) {
+			return s.find(c) != std::string::npos;
+		};
+		using namespace std::placeholders;
+		auto is_start = std::bind(contains,_1,'<');
+		auto is_end   = std::bind(contains,_1,'>');
+		auto is_delimiter = [&](string_view s) {
+			auto pos = std::find_if(delimiters.begin(),delimiters.end(),
+					[&](string_view d) { return s == d; });
+			return pos != delimiters.end();
+		};
+
+		auto start = std::find_if(strings.begin(),strings.end(),is_start);
+		while(start != strings.end()) {
+			auto end = std::find_if(start,strings.end(),is_end);
+			auto delim = std::find_if(start,strings.end(),is_delimiter);
+
+			if (start == strings.end() || end == strings.end()) break;
+			else if (delim < end) start = delim+1;
+			else {
+				string_view joined(start->begin(),end->end());
+				start = strings.erase(start,end+1);
+				start = strings.insert(start,joined) + 1;
 			}
+			start = std::find_if(start,strings.end(),is_start);
+		}
+	}
+
+	static Tokens from_pattern(string_view source) {
+		static const string_list delimiters =
+			{ "(", ")", "{", "}", "[", "]", "|", "..." };
+
+		//split off delimiters into separated tokens
+		std::vector<string_view> strings = {source};
+		for (string_view delim: delimiters) {
+			split_around(strings,delim);
 		}
 
-		static void join_tags(view_list &strings, const string_list &delimiters) {
-			auto contains = [](string_view s, char c) {
-				return s.find(c) != std::string::npos;
-			};
-			using namespace std::placeholders;
-			auto is_start = std::bind(contains,_1,'<');
-			auto is_end   = std::bind(contains,_1,'>');
-			auto is_delimiter = [&](string_view s) {
-				auto pos = std::find_if(delimiters.begin(),delimiters.end(),
-						[&](string_view d) { return s == d; });
-				return pos != delimiters.end();
-			};
+		//split tokens after whitespace
+		static const auto whitespace = {' ', '\t', '\r', '\n'};
+		split_after(strings,whitespace);
 
-			auto start = std::find_if(strings.begin(),strings.end(),is_start);
-			while(start != strings.end()) {
-				auto end = std::find_if(start,strings.end(),is_end);
-				auto delim = std::find_if(start,strings.end(),is_delimiter);
+		//join <tags with whitespace>
+		join_tags(strings,delimiters);
 
-				if (start == strings.end() || end == strings.end()) break;
-				else if (delim < end) start = delim+1;
-				else {
-					string_view joined(start->begin(),end->end());
-					start = strings.erase(start,end+1);
-					start = strings.insert(start,joined) + 1;
-				}
-				start = std::find_if(start,strings.end(),is_start);
-			}
-		}
+		//trim tokens of whitespace
+		std::transform(strings.begin(),strings.end(),strings.begin(),
+				[&](string_view s) { return s.trim(whitespace); });
 
-		static Tokens from_pattern(string_view source) {
-			static const string_list delimiters =
-				{ "(", ")", "{", "}", "[", "]", "|", "..." };
+		//remove empty tokens
+		auto end = std::remove_if(strings.begin(),strings.end(),
+						[&](string_view s) { return s.empty(); });
+		strings.erase(end,strings.end());
 
-			//split off delimiters into separater tokens
-			std::vector<string_view> strings = {source};
-			for (string_view delim: delimiters) {
-				split_around(strings,delim);
-			}
-
-			//split tokens after whitespace
-			static const auto whitespace = {' ', '\t', '\r', '\n'};
-			split_after(strings,whitespace);
-
-			//join <tags with whitespace>
-			join_tags(strings,delimiters);
-
-			//trim tokens of whitespace
-			std::transform(strings.begin(),strings.end(),strings.begin(),
-					[&](string_view s) { return s.trim(whitespace); });
-
-			//remove empty tokens
-			auto end = std::remove_if(strings.begin(),strings.end(),
-							[&](string_view s) { return s.empty(); });
-			strings.erase(end,strings.end());
-
-			std::vector<std::string> tokens(strings.begin(),strings.end());
-			return Tokens(std::move(tokens),false);
-		}
+		std::vector<std::string> tokens(strings.begin(),strings.end());
+		return Tokens(std::move(tokens),false);
+	}
 #endif
 
 	std::string const& current() const {
