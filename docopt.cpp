@@ -677,15 +677,12 @@ std::vector<Option> parse_defaults(std::string const& doc) {
 #else
 
 static std::vector<Option> parse_defaults(string_view doc) {
-	static const auto is_option_line = [](string_view l) { return l.starts_with('-'); };
-	static const auto strip_indentation = [](string_view l) {
-		std::array<char, 2> indent { ' ', '\t' };
-		return l.strip(indent.begin(),indent.end());
-	};
-	static const auto trim_whitespace = [](string_view v) {
-		std::array<char,4> whitespace { ' ', '\t', '\r', '\n' };
-		return v.trim(whitespace.begin(),whitespace.end());
-	};
+	static const auto indentation = {' ','\t'};
+	static const auto whitespace  = {' ','\t','\r','\n'};
+
+	static const auto is_option_line    = [](string_view l) { return l.starts_with('-'); };
+	static const auto strip_indentation = [](string_view l) { return l.strip(indentation); };
+	static const auto trim_whitespace   = [](string_view v) { return v.trim(whitespace); };
 
 	std::vector<Option> options;
 	for (auto section : parse_section("options:",doc)) {
