@@ -33,7 +33,6 @@ namespace std {
 #endif
 
 #include "docopt_value.h"
-#endif
 
 namespace docopt {
 
