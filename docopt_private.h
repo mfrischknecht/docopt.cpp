@@ -575,10 +575,10 @@ namespace docopt {
 		static const auto whitespace = {' ', '\t', '\r', '\n'};
 		static const auto delimiters = {'=', ',', ' '};
 		auto description = string_view(option_description.begin(),options_end);
-		auto options = description.split_after(std::begin(delimiters),std::end(delimiters));
+		auto options = description.split_after(delimiters);
 
 		for (auto &option : options) {
-			option = option.rstrip(std::begin(delimiters),std::end(delimiters));
+			option = option.rstrip(delimiters);
 			if (option.empty()) continue; //Skip delimiter-only parts
 			else if (option.starts_with("--")) longOption  = option;
 			else if (option.starts_with('-' )) shortOption = option;
