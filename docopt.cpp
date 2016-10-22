@@ -291,9 +291,8 @@ static std::vector<std::string> parse_section(std::string const& name, std::stri
 #else
 
 static std::vector<std::string> parse_section(std::string name, string_view source) {
-	static const auto is_indented = [](const string_view &l) {
-		return l.starts_with(' ') || l.starts_with('\t');
-	};
+	static const auto indentation = {' ','\t'};
+	static const auto is_indented = [&](string_view l) { return l.starts_with(indentation); };
 
 	auto is_header_line = [&](const string_view &line) {
 		return line.find(name,string_view::ignore_case) != std::string::npos;

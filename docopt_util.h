@@ -494,10 +494,40 @@ namespace {
 			return starts_with(str,cmp_chars);
 		}
 
+		template<class it, class P>
+		bool starts_with(it begin, it end, P predicate) const {
+			if (empty()) return false;
+			auto is_first_char = [&](char c) { return predicate(c,*_begin); };
+			return std::find_if(begin,end,is_first_char) != end;
+		}
+
+		template<class it>
+		bool starts_with(it begin, it end) const {
+			return starts_with(begin,end,cmp_chars);
+		}
+
+		template<class P>
+		bool starts_with(const std::initializer_list<char> &chars, P predicate) const {
+			return starts_with(std::begin(chars),std::end(chars),predicate);
+		}
+
+		bool starts_with(const std::initializer_list<char> &chars) const {
+			return starts_with(chars,cmp_chars);
+		}
+
+		template<class P>
+		bool starts_with(const std::initializer_list<const char> &chars, P predicate) const {
+			return starts_with(std::begin(chars),std::end(chars),predicate);
+		}
+
+		bool starts_with(const std::initializer_list<const char> &chars) const {
+			return starts_with(chars,cmp_chars);
+		}
+
 		template<class P>
 		bool starts_with(char c, P predicate) const {
-			if (_begin == _end) return false;
-			return predicate(*_begin,c);
+			const auto chars = {c};
+			return starts_with(chars,predicate);
 		}
 
 		bool starts_with(char c) const {
@@ -520,10 +550,40 @@ namespace {
 			return ends_with(str,cmp_chars);
 		}
 
+		template<class it, class P>
+		bool ends_with(it begin, it end, P predicate) const {
+			if (empty()) return false;
+			const auto is_last_char = [&](char c) { return predicate(c,*(_end-1)); };
+			return std::find_if(begin,end,is_last_char) != end;
+		}
+
+		template<class it>
+		bool ends_with(it begin, it end) const {
+			return ends_with(begin,end,cmp_chars);
+		}
+
+		template<class P>
+		bool ends_with(const std::initializer_list<char> &chars, P predicate) const {
+			return ends_with(std::begin(chars),std::end(chars),predicate);
+		}
+
+		bool ends_with(const std::initializer_list<char> &chars) const {
+			return ends_with(chars,cmp_chars);
+		}
+
+		template<class P>
+		bool ends_with(const std::initializer_list<const char> &chars, P predicate) const {
+			return ends_with(std::begin(chars),std::end(chars),predicate);
+		}
+
+		bool ends_with(const std::initializer_list<const char> &chars) const {
+			return ends_with(chars,cmp_chars);
+		}
+
 		template<class P>
 		bool ends_with(char c, P predicate) const {
-			if (_begin == _end) return false;
-			return predicate(*(_end-1),c);
+			const auto chars = {c};
+			return ends_with(chars,predicate);
 		}
 
 		bool ends_with(char c) const {
