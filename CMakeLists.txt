@@ -3,6 +3,8 @@ project(docopt.cpp VERSION 0.6.1)
 
 include(GNUInstallDirs)
 
+add_definitions( -DDOCOPT_NO_REGEX=1 )
+
 #============================================================================
 # Settable options
 #============================================================================

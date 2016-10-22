@@ -571,27 +571,30 @@ namespace docopt {
 			}
 		}
 #else
-		static const auto whitespace = { ' ', '\t', '\r', '\n' };
-		auto options = string_view(option_description.begin(),options_end).split_after({'=',',',' '});
-		for (auto option : options) {
-			option = option.rstrip({'=',',',' '});
-			if (option.empty()) break;
+
+		static const auto whitespace = {' ', '\t', '\r', '\n'};
+		static const auto delimiters = {'=', ',', ' '};
+		auto description = string_view(option_description.begin(),options_end);
+		auto options = description.split_after(std::begin(delimiters),std::end(delimiters));
+
+		for (auto &option : options) {
+			option = option.rstrip(std::begin(delimiters),std::end(delimiters));
+			if (option.empty()) continue; //Skip delimiter-only parts
 			else if (option.starts_with("--")) longOption  = option;
-			else if (option.starts_with('-'))  shortOption = option;
+			else if (option.starts_with('-' )) shortOption = option;
 			else argcount = 1;
 		}
 
 		if (argcount) {
 			string_view description(options_end, option_description.end());
-			string_view default_;
-			std::tie(description,default_) = description.split_once_after("[default: ");
-			if (!default_.empty()) {
+			string_view defaultValue;
+			std::tie(description,defaultValue) = description.split_once_after("[default: ",string_view::ignore_case);
+			if (!defaultValue.empty()) {
 				string_view tmp;
-				std::tie(default_,tmp) = default_.split_once_before(']');
-				if (!tmp.empty()) val = default_.str();
+				std::tie(defaultValue,tmp) = defaultValue.split_once_before(']');
+				if (!tmp.empty()) val = defaultValue.str();
 			}
 		}
-		//TODO: Continue here.
 #endif
 
 	return {

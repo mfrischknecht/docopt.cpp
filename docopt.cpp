@@ -121,8 +121,7 @@ public:
 	}
 #else
 	typedef std::vector<string_view> view_list;
-	typedef std::initializer_list<const char> char_list;
-	typedef std::initializer_list<const std::string> string_list;
+	typedef const std::initializer_list<std::string> string_list;
 
 	static void split_around(view_list &strings, const string_view &delim) {
 		if (delim.empty()) return;
@@ -143,19 +142,20 @@ public:
 		}
 	}
 
-	static void split_after(view_list &strings, const char_list &chars) {
-		if (chars.size() == 0) return;
+	template<class it>
+	static void split_after(view_list &strings, it begin, it end) {
+		if (begin == end) return;
 		auto pos = strings.begin();
 		while(pos != strings.end()) {
 			auto src = *pos;
 			pos = strings.erase(pos);
-			auto splits = src.split_after(chars);
+			auto splits = src.split_after(begin,end);
 			for (auto split: splits)
 				pos = strings.insert(pos,split) + 1;
 		}
 	}
 
-	static void join_tags(view_list &strings, const string_list &delimiters) {
+	static void join_tags(view_list &strings, string_list &delimiters) {
 		auto contains = [](string_view s, char c) {
 			return s.find(c) != std::string::npos;
 		};
@@ -185,7 +185,7 @@ public:
 	}
 
 	static Tokens from_pattern(string_view source) {
-		static const string_list delimiters =
+		static string_list delimiters =
 			{ "(", ")", "{", "}", "[", "]", "|", "..." };
 
 		//split off delimiters into separated tokens
@@ -196,14 +196,17 @@ public:
 
 		//split tokens after whitespace
 		static const auto whitespace = {' ', '\t', '\r', '\n'};
-		split_after(strings,whitespace);
+		split_after(strings,std::begin(whitespace),std::end(whitespace));
 
 		//join <tags with whitespace>
 		join_tags(strings,delimiters);
 
 		//trim tokens of whitespace
 		std::transform(strings.begin(),strings.end(),strings.begin(),
-				[&](string_view s) { return s.trim(whitespace); });
+			[&](string_view s) {
+				 return s.trim(std::begin(whitespace),
+							   std::end(whitespace));
+			 });
 
 		//remove empty tokens
 		auto end = std::remove_if(strings.begin(),strings.end(),
@@ -289,19 +292,17 @@ static std::vector<std::string> parse_section(std::string const& name, std::stri
 #else
 
 static std::vector<std::string> parse_section(std::string name, string_view source) {
-	static const auto tolower = [](char c) { return std::tolower(c); };
 	static const auto is_indented = [](const string_view &l) {
 		return l.starts_with(' ') || l.starts_with('\t');
 	};
 
-	std::transform(name.begin(), name.end(), name.begin(), tolower); //Transform `name` to lower case
-	auto is_header_line = [&](const string_view &line) { //Perform a case-insensitive search for `name`
-		static const auto matches_name = [&](char a, char b) { return tolower(a) == b; };
-		return line.end() != std::search(line.begin(), line.end(), name.begin(), name.end(), matches_name);
+	auto is_header_line = [&](const string_view &line) {
+		return line.find(name,string_view::ignore_case) != std::string::npos;
 	};
 
 	std::vector<std::string> sections;
 	auto lines = source.split_after('\n');
+
 	auto line = std::find_if(lines.begin(), lines.end(), is_header_line);
 	while (line != lines.end()) {
 		auto section_start = line;
