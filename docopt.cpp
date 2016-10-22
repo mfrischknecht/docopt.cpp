@@ -21,6 +21,10 @@
 #include <cassert>
 #include <cstddef>
 
+#ifndef DOCOPT_NO_REGEX
+#include <regex>
+#endif
+
 using namespace docopt;
 
 DOCOPT_INLINE
@@ -68,6 +72,7 @@ public:
 		return fIndex < fTokens.size();
 	}
 
+#ifndef DOCOPT_NO_REGEX
 	static Tokens from_pattern(std::string const& source) {
 		static const std::regex re_separators {
 			"(?:\\s*)" // any spaces (non-matching subgroup)
@@ -93,27 +98,122 @@ public:
 
 		std::vector<std::string> tokens;
 		std::for_each(std::sregex_iterator{ source.begin(), source.end(), re_separators },
-			      std::sregex_iterator{},
-			      [&](std::smatch const& match)
-			      {
-				      // handle anything before the separator (this is the "stuff" between the delimeters)
-				      if (match.prefix().matched) {
-					      std::for_each(std::sregex_iterator{match.prefix().first, match.prefix().second, re_strings},
-							    std::sregex_iterator{},
-							    [&](std::smatch const& m)
-							    {
-								    tokens.push_back(m[1].str());
-							    });
-				      }
+				  std::sregex_iterator{},
+				  [&](std::smatch const& match)
+				  {
+					  // handle anything before the separator (this is the "stuff" between the delimeters)
+					  if (match.prefix().matched) {
+						  std::for_each(std::sregex_iterator{match.prefix().first, match.prefix().second, re_strings},
+								std::sregex_iterator{},
+								[&](std::smatch const& m)
+								{
+									tokens.push_back(m[1].str());
+								});
+					  }
 
-				      // handle the delimter token itself
-				      if (match[1].matched) {
-					      tokens.push_back(match[1].str());
-				      }
-			      });
+					  // handle the delimter token itself
+					  if (match[1].matched) {
+						  tokens.push_back(match[1].str());
+					  }
+				  });
 
 		return Tokens(tokens, false);
 	}
+#else
+		typedef std::vector<string_view> view_list;
+		typedef std::initializer_list<const char> char_list;
+		typedef std::initializer_list<const std::string> string_list;
+
+		static void split_around(view_list &strings, const string_view &delim) {
+			if (delim.empty()) return;
+			auto pos = strings.begin();
+			while(pos != strings.end()) {
+				auto src = *pos;
+				pos = strings.erase(pos);
+				string_view head;
+				while(!src.empty()) {
+					std::tie(head,src) = src.split_once_after(delim);
+					if (head.ends_with(delim)) {
+						pos = strings.insert(pos, {head.begin(),head.end()-delim.size()})+1;
+						pos = strings.insert(pos, {head.end()-delim.size(),head.end()})+1;
+					} else {
+						pos = strings.insert(pos, head)+1;
+					}
+				}
+			}
+		}
+
+		static void split_after(view_list &strings, const char_list &chars) {
+			if (chars.size() == 0) return;
+			auto pos = strings.begin();
+			while(pos != strings.end()) {
+				auto src = *pos;
+				pos = strings.erase(pos);
+				auto splits = src.split_after(chars);
+				for (auto split: splits)
+					pos = strings.insert(pos,split) + 1;
+			}
+		}
+
+		static void join_tags(view_list &strings, const string_list &delimiters) {
+			auto contains = [](string_view s, char c) {
+				return s.find(c) != std::string::npos;
+			};
+			using namespace std::placeholders;
+			auto is_start = std::bind(contains,_1,'<');
+			auto is_end   = std::bind(contains,_1,'>');
+			auto is_delimiter = [&](string_view s) {
+				auto pos = std::find_if(delimiters.begin(),delimiters.end(),
+						[&](string_view d) { return s == d; });
+				return pos != delimiters.end();
+			};
+
+			auto start = std::find_if(strings.begin(),strings.end(),is_start);
+			while(start != strings.end()) {
+				auto end = std::find_if(start,strings.end(),is_end);
+				auto delim = std::find_if(start,strings.end(),is_delimiter);
+
+				if (start == strings.end() || end == strings.end()) break;
+				else if (delim < end) start = delim+1;
+				else {
+					string_view joined(start->begin(),end->end());
+					start = strings.erase(start,end+1);
+					start = strings.insert(start,joined) + 1;
+				}
+				start = std::find_if(start,strings.end(),is_start);
+			}
+		}
+
+		static Tokens from_pattern(string_view source) {
+			static const string_list delimiters =
+				{ "(", ")", "{", "}", "[", "]", "|", "..." };
+
+			//split off delimiters into separater tokens
+			std::vector<string_view> strings = {source};
+			for (string_view delim: delimiters) {
+				split_around(strings,delim);
+			}
+
+			//split tokens after whitespace
+			static const auto whitespace = {' ', '\t', '\r', '\n'};
+			split_after(strings,whitespace);
+
+			//join <tags with whitespace>
+			join_tags(strings,delimiters);
+
+			//trim tokens of whitespace
+			std::transform(strings.begin(),strings.end(),strings.begin(),
+					[&](string_view s) { return s.trim(whitespace); });
+
+			//remove empty tokens
+			auto end = std::remove_if(strings.begin(),strings.end(),
+							[&](string_view s) { return s.empty(); });
+			strings.erase(end,strings.end());
+
+			std::vector<std::string> tokens(strings.begin(),strings.end());
+			return Tokens(std::move(tokens),false);
+		}
+#endif
 
 	std::string const& current() const {
 		if (*this)
@@ -127,8 +227,8 @@ public:
 		if (!*this)
 			return {};
 		return join(fTokens.begin()+static_cast<std::ptrdiff_t>(fIndex),
-			    fTokens.end(),
-			    " ");
+				fTokens.end(),
+				" ");
 	}
 
 	std::string pop() {
@@ -160,6 +260,7 @@ std::vector<T*> flat_filter(Pattern& pattern) {
 	return ret;
 }
 
+#ifndef DOCOPT_NO_REGEX
 static std::vector<std::string> parse_section(std::string const& name, std::string const& source) {
 	// ECMAScript regex only has "?=" for a non-matching lookahead. In order to make sure we always have
 	// a newline to anchor our matching, we have to avoid matching the final newline of each grouping.
@@ -176,14 +277,42 @@ static std::vector<std::string> parse_section(std::string const& name, std::stri
 
 	std::vector<std::string> ret;
 	std::for_each(std::sregex_iterator(source.begin(), source.end(), re_section_pattern),
-		      std::sregex_iterator(),
-		      [&](std::smatch const& match)
+			  std::sregex_iterator(),
+			  [&](std::smatch const& match)
 	{
 		ret.push_back(trim(match[1].str()));
 	});
 
 	return ret;
 }
+
+#else
+
+static std::vector<std::string> parse_section(std::string name, string_view source) {
+	static const auto tolower = [](char c) { return std::tolower(c); };
+	static const auto is_indented = [](const string_view &l) {
+		return l.starts_with(' ') || l.starts_with('\t');
+	};
+
+	std::transform(name.begin(), name.end(), name.begin(), tolower); //Transform `name` to lower case
+	auto is_header_line = [&](const string_view &line) { //Perform a case-insensitive search for `name`
+		static const auto matches_name = [&](char a, char b) { return tolower(a) == b; };
+		return line.end() != std::search(line.begin(), line.end(), name.begin(), name.end(), matches_name);
+	};
+
+	std::vector<std::string> sections;
+	auto lines = source.split_after('\n');
+	auto line = std::find_if(lines.begin(), lines.end(), is_header_line);
+	while (line != lines.end()) {
+		auto section_start = line;
+		line = std::find_if_not(line+1, lines.end(), is_indented); //Find the section end
+		sections.push_back(trim({section_start->begin(),(line - 1)->end()}));
+		line = std::find_if(line, lines.end(), is_header_line); //Find the next section
+	}
+	return sections;
+}
+
+#endif
 
 static bool is_argument_spec(std::string const& token) {
 	if (token.empty())
@@ -202,8 +331,8 @@ template <typename I>
 std::vector<std::string> longOptions(I iter, I end) {
 	std::vector<std::string> ret;
 	std::transform(iter, end,
-		       std::back_inserter(ret),
-		       [](typename I::reference opt) { return opt->longOption(); });
+			   std::back_inserter(ret),
+			   [](typename I::reference opt) { return opt->longOption(); });
 	return ret;
 }
 
@@ -521,6 +650,8 @@ static PatternList parse_argv(Tokens tokens, std::vector<Option>& options, bool 
 	return ret;
 }
 
+#ifndef DOCOPT_NO_REGEX
+
 std::vector<Option> parse_defaults(std::string const& doc) {
 	// This pattern is a delimiter by which we split the options.
 	// The delimiter is a new line followed by a whitespace(s) followed by one or two hyphens.
@@ -542,6 +673,41 @@ std::vector<Option> parse_defaults(std::string const& doc) {
 
 	return defaults;
 }
+
+#else
+
+static std::vector<Option> parse_defaults(string_view doc) {
+	static const auto is_option_line = [](string_view l) { return l.starts_with('-'); };
+	static const auto strip_indentation = [](string_view l) {
+		std::array<char, 2> indent { ' ', '\t' };
+		return l.strip(indent.begin(),indent.end());
+	};
+	static const auto trim_whitespace = [](string_view v) {
+		std::array<char,4> whitespace { ' ', '\t', '\r', '\n' };
+		return v.trim(whitespace.begin(),whitespace.end());
+	};
+
+	std::vector<Option> options;
+	for (auto section : parse_section("options:",doc)) {
+		//Get rid of "options:"
+		auto colon = std::find(section.begin(), section.end(), ':');
+		assert(colon != section.end());
+		string_view s(colon+1,section.end());
+
+		auto lines = s.split_after('\n');
+		std::transform(lines.begin(),lines.end(),lines.begin(),strip_indentation);
+		auto line = std::find_if(lines.begin(), lines.end(), is_option_line);
+		while(line != lines.end()) {
+			auto option_start = line;
+			line = std::find_if(line+1, lines.end(), is_option_line);
+			string_view option(option_start->begin(),(line-1)->end());
+			options.push_back(Option::parse(trim_whitespace(option)));
+		}
+	}
+	return options;
+}
+
+#endif
 
 static bool isOptionSet(PatternList const& options, std::string const& opt1, std::string const& opt2 = "") {
 	return std::any_of(options.begin(), options.end(), [&](std::shared_ptr<Pattern const> const& opt) -> bool {
@@ -597,9 +763,9 @@ static std::pair<Required, std::vector<Option>> create_pattern_tree(std::string 
 		// turn into shared_ptr's and set as children
 		PatternList children;
 		std::transform(uniq_doc_options.begin(), uniq_doc_options.end(),
-			       std::back_inserter(children), [](Option const* opt) {
-				       return std::make_shared<Option>(*opt);
-			       });
+				   std::back_inserter(children), [](Option const* opt) {
+					   return std::make_shared<Option>(*opt);
+				   });
 		options_shortcut->setChildren(std::move(children));
 	}
 
@@ -609,10 +775,10 @@ static std::pair<Required, std::vector<Option>> create_pattern_tree(std::string 
 DOCOPT_INLINE
 std::map<std::string, value>
 docopt::docopt_parse(std::string const& doc,
-		     std::vector<std::string> const& argv,
-		     bool help,
-		     bool version,
-		     bool options_first)
+			 std::vector<std::string> const& argv,
+			 bool help,
+			 bool version,
+			 bool options_first)
 {
 	Required pattern;
 	std::vector<Option> options;
@@ -659,10 +825,10 @@ docopt::docopt_parse(std::string const& doc,
 DOCOPT_INLINE
 std::map<std::string, value>
 docopt::docopt(std::string const& doc,
-	       std::vector<std::string> const& argv,
-	       bool help,
-	       std::string const& version,
-	       bool options_first) noexcept
+		   std::vector<std::string> const& argv,
+		   bool help,
+		   std::string const& version,
+		   bool options_first) noexcept
 {
 	try {
 		return docopt_parse(doc, argv, help, !version.empty(), options_first);
