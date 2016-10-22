@@ -155,6 +155,14 @@ public:
 		}
 	}
 
+	static void split_after(view_list &strings, const std::initializer_list<const char> &chars) {
+		return split_after(strings,std::begin(chars),std::end(chars));
+	}
+
+	static void split_after(view_list &strings, const std::initializer_list<char> &chars) {
+		return split_after(strings,std::begin(chars),std::end(chars));
+	}
+
 	static void join_tags(view_list &strings, string_list &delimiters) {
 		auto is_start = [](string_view s) { return s.find('<') != std::string::npos; };
 		auto is_end   = [](string_view s) { return s.find('>') != std::string::npos; };
@@ -181,32 +189,27 @@ public:
 	}
 
 	static Tokens from_pattern(string_view source) {
-		static string_list delimiters =
-			{ "(", ")", "{", "}", "[", "]", "|", "..." };
+		static const string_list delimiters = { "(", ")", "{", "}", "[", "]", "|", "..." };
 
 		//split off delimiters into separated tokens
 		std::vector<string_view> strings = {source};
-		for (string_view delim: delimiters) {
+		for (string_view delim: delimiters)
 			split_around(strings,delim);
-		}
 
 		//split tokens after whitespace
 		static const auto whitespace = {' ', '\t', '\r', '\n'};
-		split_after(strings,std::begin(whitespace),std::end(whitespace));
+		split_after(strings,whitespace);
 
 		//join <tags with whitespace>
 		join_tags(strings,delimiters);
 
 		//trim tokens of whitespace
-		std::transform(strings.begin(),strings.end(),strings.begin(),
-			[&](string_view s) {
-				 return s.trim(std::begin(whitespace),
-							   std::end(whitespace));
-			 });
+		const auto trim = [&](string_view s){return s.trim(whitespace);};
+		std::transform(strings.begin(),strings.end(),strings.begin(),trim);
 
 		//remove empty tokens
-		auto end = std::remove_if(strings.begin(),strings.end(),
-						[&](string_view s) { return s.empty(); });
+		const auto is_empty = [&](string_view s) { return s.empty(); };
+		auto end = std::remove_if(strings.begin(),strings.end(),is_empty);
 		strings.erase(end,strings.end());
 
 		std::vector<std::string> tokens(strings.begin(),strings.end());

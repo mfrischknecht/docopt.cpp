@@ -111,13 +111,31 @@ namespace {
 		}
 
 		size_t find(string_view str, size_t pos = 0) const {
-		  return find(str,cmp_chars,pos);
+			return find(str,cmp_chars,pos);
+		}
+
+		template<class P>
+		size_t find(const std::initializer_list<char> &chars, P predicate, size_t pos = 0) const {
+			return find(std::begin(chars),std::end(chars),predicate,pos);
+		}
+
+		size_t find(const std::initializer_list<char> &chars, size_t pos = 0) const {
+			return find(chars,cmp_chars,pos);
+		}
+
+		template<class P>
+		size_t find(const std::initializer_list<const char> &chars, P predicate, size_t pos = 0) const {
+			return find(std::begin(chars),std::end(chars),predicate,pos);
+		}
+
+		size_t find(const std::initializer_list<const char> &chars, size_t pos = 0) const {
+			return find(chars,cmp_chars,pos);
 		}
 
 		template<class P>
 		size_t find(char c, P predicate, size_t pos = 0) const {
-			std::array<char,1> chars { c };
-			return find(std::begin(chars),std::end(chars),predicate,pos);
+			const auto chars = {c};
+			return find(chars,predicate,pos);
 		}
 
 		size_t find(char c, size_t pos = 0) const {
@@ -184,9 +202,27 @@ namespace {
 		}
 
 		template<class P>
-		pair split_once_before(char c, P predicate) const {
-			std::array<char,1> chars { c };
+		pair split_once_before(const std::initializer_list<char> &chars, P predicate) const {
 			return split_once_before(std::begin(chars),std::end(chars),predicate);
+		}
+
+		pair split_once_before(const std::initializer_list<char> &chars) const {
+			return split_once_before(chars,cmp_chars);
+		}
+
+		template<class P>
+			pair split_once_before(const std::initializer_list<const char> &chars, P predicate) const {
+			return split_once_before(std::begin(chars),std::end(chars),predicate);
+		}
+
+		pair split_once_before(const std::initializer_list<const char> &chars) const {
+			return split_once_before(chars,cmp_chars);
+		}
+
+		template<class P>
+		pair split_once_before(char c, P predicate) const {
+			const auto chars = {c};
+			return split_once_before(chars,predicate);
 		}
 
 		pair split_once_before(char c) const {
@@ -194,9 +230,27 @@ namespace {
 		}
 
 		template<class P>
-		pair split_once_after(char c, P predicate) const {
-			std::array<char,1> chars { c };
+		pair split_once_after(const std::initializer_list<char> &chars, P predicate) const {
 			return split_once_after(std::begin(chars),std::end(chars),predicate);
+		}
+
+		pair split_once_after(const std::initializer_list<char> &chars) const {
+			return split_once_after(chars,cmp_chars);
+		}
+
+		template<class P>
+		pair split_once_after(const std::initializer_list<const char> &chars, P predicate) const {
+			return split_once_after(std::begin(chars),std::end(chars),predicate);
+		}
+
+		pair split_once_after(const std::initializer_list<const char> &chars) const {
+			return split_once_after(chars,cmp_chars);
+		}
+
+		template<class P>
+		pair split_once_after(char c, P predicate) const {
+			const auto chars = {c};
+			return split_once_after(chars,predicate);
 		}
 
 		pair split_once_after(char c) const {
@@ -241,7 +295,7 @@ namespace {
 		}
 
 		template<class it, class P>
-			vector split_after(it begin, it end, P predicate, size_t n = 0) const {
+		vector split_after(it begin, it end, P predicate, size_t n = 0) const {
 			if (begin == end || empty()) return { *this };
 			if (n == 0) n = std::numeric_limits<size_t>::max();
 			vector result;
@@ -280,9 +334,27 @@ namespace {
 		}
 
 		template<class P>
-		vector split_before(char c, P predicate, size_t n = 0) const {
-			std::array<char,1> chars { c };
+		vector split_before(const std::initializer_list<char> &chars, P predicate, size_t n = 0) const {
 			return split_before(std::begin(chars),std::end(chars),predicate,n);
+		}
+
+		vector split_before(const std::initializer_list<char> &chars, size_t n = 0) const {
+			return split_before(chars,cmp_chars,n);
+		}
+
+		template<class P>
+			vector split_before(const std::initializer_list<const char> &chars, P predicate, size_t n = 0) const {
+			return split_before(std::begin(chars),std::end(chars),predicate,n);
+		}
+
+		vector split_before(const std::initializer_list<const char> &chars, size_t n = 0) const {
+			return split_before(chars,cmp_chars,n);
+		}
+
+		template<class P>
+		vector split_before(char c, P predicate, size_t n = 0) const {
+			const auto chars = {c};
+			return split_before(chars,predicate,n);
 		}
 
 		vector split_before(char c, size_t n = 0) const {
@@ -290,9 +362,28 @@ namespace {
 		}
 
 		template<class P>
-		vector split_after(char c, P predicate, size_t n = 0) const {
-			std::array<char,1> chars { c };
+		vector split_after(const std::initializer_list<char> &chars, P predicate, size_t n = 0) const {
 			return split_after(std::begin(chars),std::end(chars),predicate,n);
+		}
+
+		vector split_after(const std::initializer_list<char> &chars, size_t n = 0) const {
+			return split_after(chars,cmp_chars,n);
+		}
+
+
+		template<class P>
+		vector split_after(const std::initializer_list<const char> &chars, P predicate, size_t n = 0) const {
+			return split_after(std::begin(chars),std::end(chars),predicate,n);
+		}
+
+		vector split_after(const std::initializer_list<const char> &chars, size_t n = 0) const {
+			return split_after(chars,cmp_chars,n);
+		}
+
+		template<class P>
+		vector split_after(char c, P predicate, size_t n = 0) const {
+			const auto chars = {c};
+			return split_after(chars,predicate,n);
 		}
 
 		vector split_after(char c, size_t n = 0) const {
@@ -300,7 +391,7 @@ namespace {
 		}
 
 		template<class it, class P>
-		  string_view strip(it begin, it end, P predicate) const {
+		string_view strip(it begin, it end, P predicate) const {
 			if (empty()) return {};
 			auto i = std::find_if_not(_begin,_end,[&](char c) {
 				auto equals_c = [&](char a) { return predicate(a,c); };
@@ -315,14 +406,31 @@ namespace {
 		}
 
 		template<class P>
+		string_view strip(const std::initializer_list<char> &chars, P predicate) const {
+			return strip(std::begin(chars),std::end(chars),predicate);
+		}
+
+		string_view strip(const std::initializer_list<char> &chars) const {
+			return strip(chars,cmp_chars);
+		}
+
+		template<class P>
+		string_view strip(const std::initializer_list<const char> &chars, P predicate) const {
+			return strip(std::begin(chars),std::end(chars),predicate);
+		}
+
+		string_view strip(const std::initializer_list<const char> &chars) const {
+			return strip(chars,cmp_chars);
+		}
+
+		template<class P>
 		string_view strip(char c, P predicate) const {
-			std::array<char,1> chars { c };
-			return strip(chars.begin(),chars.end(),predicate);
+			const auto chars = {c};
+			return strip(chars,predicate);
 		}
 
 		string_view strip(char c) const {
-			std::array<char,1> chars { c };
-			return strip(chars.begin(),chars.end(),cmp_chars);
+			return strip(c,cmp_chars);
 		}
 
 		template<class it, class P>
@@ -343,9 +451,27 @@ namespace {
 		}
 
 		template<class P>
+		string_view rstrip(const std::initializer_list<char> &chars, P predicate) const {
+			return rstrip(std::begin(chars),std::end(chars),predicate);
+		}
+
+		string_view rstrip(const std::initializer_list<char> &chars) const {
+			return rstrip(chars,cmp_chars);
+		}
+
+		template<class P>
+		string_view rstrip(const std::initializer_list<const char> &chars, P predicate) const {
+			return rstrip(std::begin(chars),std::end(chars),predicate);
+		}
+
+		string_view rstrip(const std::initializer_list<const char> &chars) const {
+			return rstrip(chars,cmp_chars);
+		}
+
+		template<class P>
 		string_view rstrip(char c, P predicate) const {
-			std::array<char,1> chars { c };
-			return rstrip(chars.begin(),chars.end(),predicate);
+			const auto chars = {c};
+			return rstrip(chars,predicate);
 		}
 
 		string_view rstrip(char c) const {
@@ -415,8 +541,27 @@ namespace {
 		}
 
 		template<class P>
+		string_view trim(const std::initializer_list<char> &chars, P predicate) const {
+			return trim(std::begin(chars),std::end(chars),predicate);
+		}
+
+		string_view trim(const std::initializer_list<char> &chars) const {
+			return trim(chars,cmp_chars);
+		}
+
+		template<class P>
+		string_view trim(const std::initializer_list<const char> &chars, P predicate) const {
+			return trim(std::begin(chars),std::end(chars),predicate);
+		}
+
+		string_view trim(const std::initializer_list<const char> &chars) const {
+			return trim(chars,cmp_chars);
+		}
+
+		template<class P>
 		string_view trim(char c, P predicate) const {
-			return strip(c,predicate).rstrip(c,predicate);
+			const auto chars = {c};
+			return trim(chars,predicate);
 		}
 
 		string_view trim(char c) const {
