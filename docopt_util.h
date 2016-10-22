@@ -574,6 +574,17 @@ namespace {
 
 		std::string str() const { return std::string(*this); }
 
+		string_view substr(size_t start) const {
+			return { std::min(_begin+start,_end), _end };
+		}
+
+		string_view substr(size_t start, size_t length) const {
+			return {
+				std::min(_begin+start,_end),
+				std::min(_begin+start+length,_end)
+			};
+		}
+
 		bool operator==(string_view other) {
 			if (_begin == other._begin &&
 				_end == other._end)

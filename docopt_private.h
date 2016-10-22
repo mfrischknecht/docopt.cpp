@@ -590,9 +590,15 @@ namespace docopt {
 			string_view defaultValue;
 			std::tie(description,defaultValue) = description.split_once_after("[default: ",string_view::ignore_case);
 			if (!defaultValue.empty()) {
-				string_view tmp;
-				std::tie(defaultValue,tmp) = defaultValue.split_once_before(']');
-				if (!tmp.empty()) val = defaultValue.str();
+				// Find the last ']' in the description
+				auto i = std::end(defaultValue)-1;
+				const auto begin = std::begin(defaultValue);
+				for (; i >= begin; --i) if (*i == ']') break;
+
+				if (i >= begin) {
+					defaultValue = defaultValue.substr(0,std::distance(begin,i));
+					val = defaultValue.str();
+				}
 			}
 		}
 #endif
